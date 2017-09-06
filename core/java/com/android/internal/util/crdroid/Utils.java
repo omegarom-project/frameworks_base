@@ -397,6 +397,7 @@ public class Utils {
         return needsNav;
     }
 
+<<<<<<< HEAD
     // Volume panel
     public static void toggleVolumePanel(Context context) {
         AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
@@ -425,6 +426,15 @@ public class Utils {
             } catch (RemoteException e) {
                 // do nothing.
             }
+        }
+    }
+
+    public static void takeScreenshot(boolean full) {
+        IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
+        try {
+            wm.sendCustomAction(new Intent(full? INTENT_SCREENSHOT : INTENT_REGION_SCREENSHOT));
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 }
