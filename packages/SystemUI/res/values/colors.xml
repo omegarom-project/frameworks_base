@@ -167,4 +167,6 @@
 
     <!-- Logout button -->
     <color name="logout_button_bg_color">#ccffffff</color>
+
+    <color name="qs_icon_active_color">@*android:color/qs_icon_active_color</color>
 </resources>
