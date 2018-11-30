@@ -295,6 +295,8 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
             "system:" + Settings.System.BERRY_ACCENT_PICKER;
     private static final String BERRY_THEME_OVERRIDE =
             "system:" + Settings.System.BERRY_THEME_OVERRIDE;
+    private static final String BERRY_DARK_STYLE =
+            "system:" + Settings.System.BERRY_DARK_STYLE;
 
     private static final String BANNER_ACTION_CANCEL =
             "com.android.systemui.statusbar.banner_action_cancel";
@@ -471,6 +473,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
     private int mAccentSetting;
     private int mThemeOverride;
+    private int mDarkStyle;
 
     /**
      * Helper that is responsible for showing the right toast when a disallowed activity operation
@@ -729,6 +732,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         tunerService.addTunable(this, FORCE_SHOW_NAVBAR);
         tunerService.addTunable(this, BERRY_ACCENT_PICKER);
         tunerService.addTunable(this, BERRY_THEME_OVERRIDE);
+        tunerService.addTunable(this, BERRY_DARK_STYLE);
 
         mDisplayManager = mContext.getSystemService(DisplayManager.class);
 
@@ -2212,6 +2216,9 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
     // Check for the dark system theme
     public boolean isUsingDarkTheme() {
+        if (mDarkStyle == 1)
+            return ThemeAccentUtils.isUsingBlackTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId());
+
         return ThemeAccentUtils.isUsingDarkTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId());
     }
 
@@ -4161,7 +4168,8 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
         if (isUsingDarkTheme() != useDarkTheme) {
             mUiOffloadThread.submit(() -> {
-                ThemeAccentUtils.setLightDarkTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId(), useDarkTheme);
+                ThemeAccentUtils.setSystemTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId(),
+                                            useDarkTheme, mDarkStyle);
             });
 
             if (mUiModeManager != null) {
@@ -5942,6 +5950,16 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                 }
                 break;
 
+            case BERRY_DARK_STYLE:
+                int darkStyle =
+                        newValue == null ? 0 : Integer.parseInt(newValue);
+                if (mDarkStyle != darkStyle) {
+                    mDarkStyle = darkStyle;
+                    updateTheme();
+                }
+                break;
+            default:
+                break;
         }
     }
     // End Extra BaseStatusBarMethods.
