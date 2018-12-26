@@ -80,6 +80,8 @@ public class ThemeAccentUtils {
         "com.accents.userfive", // 26
         "com.accents.usersix", // 27
         "com.accents.userseven", // 28
+	"com.accents.netflix", //29 Netflix Accent
+	"com.accents.bubblegumpink", //30 Bubblegum Pink Accent
     };
 
     // Unloads the stock dark theme
