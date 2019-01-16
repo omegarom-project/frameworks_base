@@ -4229,6 +4229,12 @@ public final class Settings {
         public static final String RECENTS_ICON_PACK = "recents_icon_pack";
 
         /**
+         * Switch between different qs tile styles
+         * @hide
+         */
+        public static final String BERRY_QS_TILE_STYLE = "berry_qs_tile_style";
+
+        /**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.
          *
