@@ -420,7 +420,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
     // top bar
     private KeyguardStatusBarView mKeyguardStatusBar;
-    private boolean mLeaveOpenOnKeygurdHide;
+    private boolean mLeaveOpenOnKeyguardHide;
     KeyguardIndicationController mKeyguardIndicationController;
 
     // Keyguard is actually fading away now.
@@ -708,7 +708,9 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         mAppOpsListener = Dependency.get(AppOpsListener.class);
         mAppOpsListener.setUpWithPresenter(this, mEntryManager);
         mZenController = Dependency.get(ZenModeController.class);
-        mKeyguardViewMediator = getComponent(KeyguardViewMediator.c   mColorExtractor = Dependency.get(SysuiColorExtractor.class);
+        mKeyguardViewMediator = getComponent(KeyguardViewMediator.class);
+
+        mColorExtractor = Dependency.get(SysuiColorExtractor.class);
         mColorExtractor.addOnColorsChangedListener(this);
 
         final TunerService tunerService = Dependency.get(TunerService.class);
@@ -783,7 +785,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
         mLockscreenUserManager.setUpWithPresenter(this, mEntryManager);
         mCommandQueue.disable(switches[0], switches[6], false /* animate */);
-        setSystemUiVisibility(switches[1], switches[], switches[8], 0xffffffff,
+        setSystemUiVisibility(switches[1], switches[7], switches[8], 0xffffffff,
                 fullscreenStackBounds, dockedStackBounds);
         topAppWindowChanged(switches[2] != 0);
         // StatusBarManagerService has a back up of IME token and it's restored here.
@@ -1037,7 +1039,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                 mScrimController.setDrawBehindAsSrc(asSrc);
                 mStackScroller.setDrawBackgroundAsSrc(asSrc);
             };
-            mBackdrop.setOnVisibilnable(runnable);
+            mBackdrop.setOnVisibilityChangedRunnable(runnable);
             runnable.run();
         }
         mStackScroller.setScrimController(mScrimController);
@@ -1310,7 +1312,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         // animate-swipe all dismissable notifications, then animate the shade closed
         int numChildren = mStackScroller.getChildCount();
 
-        final ArrayList<View> viewsToHirayList<>(numChildren);
+        final ArrayList<View> viewsToHide = new ArrayList<>(numChildren);
         final ArrayList<ExpandableNotificationRow> viewsToRemove = new ArrayList<>(numChildren);
         for (int i = 0; i < numChildren; i++) {
             final View child = mStackScroller.getChildAt(i);
@@ -1610,7 +1612,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
             ExpandableNotificationRow row = (ExpandableNotificationRow) view;
             currentIndex++;
             if (!mEntryManager.getNotificationData().isAmbient(
-           w.getStatusBarNotification().getKey())) {
+                    row.getStatusBarNotification().getKey())) {
                 speedBumpIndex = currentIndex;
             }
         }
@@ -1804,7 +1806,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
                 if (DEBUG_MEDIA_FAKE_ARTWORK) {
                     final int c = 0xFF000000 | (int)(Math.random() * 0xFFFFFF);
-                    Log.v(TAG, Sring.format("DEBUG_MEDIA: setting new color: 0x%08x", c));
+                    Log.v(TAG, String.format("DEBUG_MEDIA: setting new color: 0x%08x", c));
                     mBackdropBack.setBackgroundColor(0xFFFFFFFF);
                     mBackdropBack.setImageDrawable(new ColorDrawable(c));
                 } else {
@@ -2080,7 +2082,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
     @Override
     public void onHeadsUpPinnedModeChanged(boolean inPinnedMode) {
         if (inPinnedMode) {
-            mStatusBarsUpShowing(true);
+            mStatusBarWindowManager.setHeadsUpShowing(true);
             mStatusBarWindowManager.setForceStatusBarVisible(true);
             if (mNotificationPanel.isFullyCollapsed()) {
                 // We need to ensure that the touchable region is updated before the window will be
@@ -2402,7 +2404,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
     }
 
     public void postAnimateOpenPanels() {
-      er.sendEmptyMessage(MSG_OPEN_SETTINGS_PANEL);
+        mHandler.sendEmptyMessage(MSG_OPEN_SETTINGS_PANEL);
     }
 
     @Override
@@ -2524,7 +2526,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         visibilityChanged(false);
 
         // Shrink the window to the size of the status bar only
-        mtatusBarWindowManager.setPanelVisible(false);
+        mStatusBarWindowManager.setPanelVisible(false);
         mStatusBarWindowManager.setForceStatusBarVisible(false);
 
         // Close any guts that might be visible
@@ -2817,7 +2819,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
     void checkBarModes() {
         if (mDemoMode) return;
-        if (mStatusBarView checkBarMode(mStatusBarMode, mStatusBarWindowState,
+        if (mStatusBarView != null) checkBarMode(mStatusBarMode, mStatusBarWindowState,
                 getStatusBarTransitions());
         if (mNavigationBar != null) mNavigationBar.checkNavBarModes();
         mNoAnimationOnNextBarModeChange = false;
@@ -2928,7 +2930,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                     mLastFullscreenStackBounds, mLastDockedStackBounds);
         } else {
             setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE, 0, 0,
-                    View.SYSTEM_UI_FLAG_LOW_PROFILE, mLastFullscreeStackBounds,
+                    View.SYSTEM_UI_FLAG_LOW_PROFILE, mLastFullscreenStackBounds,
                     mLastDockedStackBounds);
         }
     }
@@ -3229,7 +3231,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                             true /* delayed*/);
                 } else {
 
-                    // Do it after DismissAction has been processed to coneeded ordering.
+                    // Do it after DismissAction has been processed to conserve the needed ordering.
                     mHandler.post(this::runPostCollapseRunnables);
                 }
             } else if (isInLaunchTransition() && mNotificationPanel.isLaunchTransitionFinished()) {
@@ -3524,7 +3526,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                 isSecure,
                 canSkipBouncer);
         if (stateFingerprint != mLastLoggedStateFingerprint) {
-           if (mStatusBarStateLog == null) {
+            if (mStatusBarStateLog == null) {
                 mStatusBarStateLog = new LogMaker(MetricsEvent.VIEW_UNKNOWN);
             }
             mMetricsLogger.write(mStatusBarStateLog
@@ -3836,7 +3838,9 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
      *
      * @param beforeFading the runnable to be run when the circle is fully expanded and the fading
      *                     starts
-     * @param endRunnable the runnable to be run when the transitiblic void fadeKeyguardAfterLaunchTransition(final Runnable beforeFading,
+     * @param endRunnable the runnable to be run when the transition is done
+     */
+    public void fadeKeyguardAfterLaunchTransition(final Runnable beforeFading,
             Runnable endRunnable) {
         mHandler.removeMessages(MSG_LAUNCH_TRANSITION_TIMEOUT);
         mLaunchTransitionEndRunnable = endRunnable;
@@ -4120,7 +4124,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                 break;
             case 3:
                 useDarkTheme = true;
-        break;
+                break;
             default:
                 useDarkTheme = wallpaperWantsDarkTheme || nightModeWantsDarkTheme;
                 break;
@@ -4443,7 +4447,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                     (int) (dragLengthY / mDisplayMetrics.density),
                     0 /* velocityDp - N/A */);
 
-      // We have notifications, go to locked shade.
+            // We have notifications, go to locked shade.
             goToLockedShade(startingChild);
             if (startingChild instanceof ExpandableNotificationRow) {
                 ExpandableNotificationRow row = (ExpandableNotificationRow) startingChild;
@@ -4632,7 +4636,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         startWorkChallengeIfNecessary(userId, null, null);
         // Add pending remote input view after starting work challenge, as starting work challenge
         // will clear all previous pending review view
-       mPendingWorkRemoteInputView = clicked;
+        mPendingWorkRemoteInputView = clicked;
     }
 
     @Override
@@ -4928,7 +4932,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                 // we will dismiss us too early since we are waiting on an activity to be drawn and
                 // incorrectly get notified because of the screen on event (which resumes and pauses
                 // some activities)
-              _CAMERA_LIFT) Slog.d(TAG, "Deferring until screen turns on");
+                if (DEBUG_CAMERA_LIFT) Slog.d(TAG, "Deferring until screen turns on");
                 mLaunchCameraOnScreenTurningOn = true;
             }
         }
@@ -5017,7 +5021,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                     ScrimState.BOUNCER_SCRIMMED : ScrimState.BOUNCER;
             mScrimController.transitionTo(state);
         } else if (isInLaunchTransition() || mLaunchCameraOnScreenTurningOn
-                || launchingAffordanceWitPreview) {
+                || launchingAffordanceWithPreview) {
             mScrimController.transitionTo(ScrimState.UNLOCKED, mUnlockScrimCallback);
         } else if (mBrightnessMirrorVisible) {
             mScrimController.transitionTo(ScrimState.BRIGHTNESS_MIRROR);
@@ -5363,7 +5367,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         }
         Notification notification = sbn.getNotification();
         final PendingIntent intent = notification.contentIntent != null
-         otification.contentIntent
+                ? notification.contentIntent
                 : notification.fullScreenIntent;
         final String notificationKey = sbn.getKey();
 
@@ -5643,7 +5647,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         KeyboardShortcuts.toggle(mContext, deviceId);
     }
 
-    protected void dismissuts() {
+    protected void dismissKeyboardShortcuts() {
         KeyboardShortcuts.dismiss();
     }
 

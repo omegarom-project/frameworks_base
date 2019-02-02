@@ -1012,7 +1012,8 @@ public final class Settings {
             "android.settings.NETWORK_OPERATOR_SETTINGS";
 
     /**
-     * Activity Action: Show settings for selection of    * <p>
+     * Activity Action: Show settings for selection of 2G/3G.
+     * <p>
      * In some cases, a matching Activity may not exist, so ensure you
      * safeguard against this.
      * <p>
@@ -1263,7 +1264,7 @@ public final class Settings {
      * {@link android.service.voice.VoiceInteractionSession#startVoiceActivity
      * startVoiceActivity}.
      * <p>
-     * Note: Th Activity implementing this intent MUST verify that
+     * Note: The Activity implementing this intent MUST verify that
      * {@link android.app.Activity#isVoiceInteraction isVoiceInteraction}.
      * returns true before modifying the setting.
      * <p>
@@ -1609,7 +1610,7 @@ public final class Settings {
     public static final String CALL_METHOD_GET_GLOBAL = "GET_global";
 
     /**
-     * @hide - Specifies that the callt-path call()-based flow tracks
+     * @hide - Specifies that the caller of the fast-path call()-based flow tracks
      * the settings generation in order to cache values locally. If this key is
      * mapped to a <code>null</code> string extra in the request bundle, the response
      * bundle will contain the same key mapped to a parcelable extra which would be
@@ -1808,7 +1809,7 @@ public final class Settings {
      * User has not yet completed setup personalization.
      * @hide
      */
-    public tatic final int USER_SETUP_PERSONALIZATION_STARTED = 1;
+    public static final int USER_SETUP_PERSONALIZATION_STARTED = 1;
 
     /**
      * User has snoozed personalization and will complete it later.
@@ -2119,7 +2120,8 @@ public final class Settings {
                                     MemoryIntArray array = b.getParcelable(
                                             CALL_METHOD_TRACK_GENERATION_KEY);
                                     final int index = b.getInt(
-                                            CALL_METHOD_GENERATION_INDEX                                   if (array != null && index >= 0) {
+                                            CALL_METHOD_GENERATION_INDEX_KEY, -1);
+                                    if (array != null && index >= 0) {
                                         final int generation = b.getInt(
                                                 CALL_METHOD_GENERATION_KEY, 0);
                                         if (DEBUG) {
@@ -2346,7 +2348,7 @@ public final class Settings {
             MOVED_TO_GLOBAL.add(Settings.Global.TZINFO_UPDATE_CONTENT_URL);
             MOVED_TO_GLOBAL.add(Settings.Global.TZINFO_UPDATE_METADATA_URL);
             MOVED_TO_GLOBAL.add(Settings.Global.SELINUX_UPDATE_CONTENT_URL);
-            MOOBAL.add(Settings.Global.SELINUX_UPDATE_METADATA_URL);
+            MOVED_TO_GLOBAL.add(Settings.Global.SELINUX_UPDATE_METADATA_URL);
             MOVED_TO_GLOBAL.add(Settings.Global.SMS_SHORT_CODES_UPDATE_CONTENT_URL);
             MOVED_TO_GLOBAL.add(Settings.Global.SMS_SHORT_CODES_UPDATE_METADATA_URL);
             MOVED_TO_GLOBAL.add(Settings.Global.CERT_PIN_UPDATE_CONTENT_URL);
@@ -2615,7 +2617,7 @@ public final class Settings {
         }
 
         /** @hide */
-        public static boolean putLongFResolver cr, String name, long value,
+        public static boolean putLongForUser(ContentResolver cr, String name, long value,
                 int userHandle) {
             return putStringForUser(cr, name, Long.toString(value), userHandle);
         }
@@ -2906,7 +2908,7 @@ public final class Settings {
         /**
          * @deprecated Use {@link android.provider.Settings.Global#RADIO_BLUETOOTH} instead
          */
-    precated
+        @Deprecated
         public static final String RADIO_BLUETOOTH = Global.RADIO_BLUETOOTH;
 
         /**
@@ -3247,7 +3249,7 @@ public final class Settings {
          * {@link android.os.Build.VERSION_CODES#N_MR1}.
          */
         @Deprecated
-        public static final SHOW_PROCESSES = Global.SHOW_PROCESSES;
+        public static final String SHOW_PROCESSES = Global.SHOW_PROCESSES;
 
         /**
          * If 1, the activity manager will aggressively finish activities and
@@ -3544,7 +3546,7 @@ public final class Settings {
         /**
          * Persistent store for the system-wide default alarm alert.
          *
-         *@see #RINGTONE
+         * @see #RINGTONE
          * @see #DEFAULT_ALARM_ALERT_URI
          */
         public static final String ALARM_ALERT = "alarm_alert";
@@ -3878,7 +3880,7 @@ public final class Settings {
         public static final String SHOW_TOUCHES = "show_touches";
 
         /** @hide */
-        public static final Validator SHOWATOR = BOOLEAN_VALIDATOR;
+        public static final Validator SHOW_TOUCHES_VALIDATOR = BOOLEAN_VALIDATOR;
 
         /**
          * Log raw orientation data from
@@ -4005,7 +4007,7 @@ public final class Settings {
          * "SIP_ADDRESS_ONLY" : Only if destination is a SIP address
          * @hide
          */
-        public static final String SIP_CALL_OPTIONS = "sip_call_options"
+        public static final String SIP_CALL_OPTIONS = "sip_call_options";
 
         /** @hide */
         public static final Validator SIP_CALL_OPTIONS_VALIDATOR =
@@ -4177,7 +4179,7 @@ public final class Settings {
          */
         public static final String FONT_INFO = "font_info";
 
-        /**
+         /**
          * Hold list of installed font provider packages. Uses "|" as a delimiter
          *
          * @hide
@@ -4341,7 +4343,7 @@ public final class Settings {
             PRIVATE_SETTINGS.add(NOTIFICATION_LIGHT_PULSE);
             PRIVATE_SETTINGS.add(POINTER_LOCATION);
             PRIVATE_SETTINGS.add(SHOW_TOUCHES);
-            PRIVATE_SETTINGS.add(WINDOW_ORIESTENER_LOG);
+            PRIVATE_SETTINGS.add(WINDOW_ORIENTATION_LISTENER_LOG);
             PRIVATE_SETTINGS.add(POWER_SOUNDS_ENABLED);
             PRIVATE_SETTINGS.add(DOCK_SOUNDS_ENABLED);
             PRIVATE_SETTINGS.add(LOCKSCREEN_SOUNDS_ENABLED);
@@ -4572,7 +4574,7 @@ public final class Settings {
         public static final String HTTP_PROXY = Global.HTTP_PROXY;
 
         /**
-         * @deprecate Use {@link android.provider.Settings.Secure#INSTALL_NON_MARKET_APPS} instead
+         * @deprecated Use {@link android.provider.Settings.Secure#INSTALL_NON_MARKET_APPS} instead
          */
         @Deprecated
         public static final String INSTALL_NON_MARKET_APPS = Secure.INSTALL_NON_MARKET_APPS;
@@ -4857,7 +4859,7 @@ public final class Settings {
             MOVED_TO_GLOBAL.add(Settings.Global.NETSTATS_GLOBAL_ALERT_BYTES);
             MOVED_TO_GLOBAL.add(Settings.Global.NETSTATS_POLL_INTERVAL);
             MOVED_TO_GLOBAL.add(Settings.Global.NETSTATS_SAMPLE_ENABLED);
-            MOVED_TO_GLOBAL.add(SetNETSTATS_TIME_CACHE_MAX_AGE);
+            MOVED_TO_GLOBAL.add(Settings.Global.NETSTATS_TIME_CACHE_MAX_AGE);
             MOVED_TO_GLOBAL.add(Settings.Global.NETSTATS_UID_BUCKET_DURATION);
             MOVED_TO_GLOBAL.add(Settings.Global.NETSTATS_UID_DELETE_AGE);
             MOVED_TO_GLOBAL.add(Settings.Global.NETSTATS_UID_PERSIST_BYTES);
@@ -5062,7 +5064,7 @@ public final class Settings {
          * can assign to it a tag T3 (note that now the package that changed
          * the setting is not yours). Now if you reset your changes for T1 and
          * T2 only setting B will be reset and A not (as it was changed by
-     nother package) but since A did not change you are in the desired
+         * another package) but since A did not change you are in the desired
          * initial state. Now if the other app changes the value of A (assuming
          * you registered an observer in the beginning) you would detect that
          * the setting was changed by another app and handle this appropriately
@@ -5331,7 +5333,7 @@ public final class Settings {
          *
          * @param cr The ContentResolver to access.
          * @param name The name of the setting to modify.
-         * @param value The new vlue for the setting.
+         * @param value The new value for the setting.
          * @return true if the value was set, false on database errors
          */
         public static boolean putLong(ContentResolver cr, String name, long value) {
@@ -5635,7 +5637,7 @@ public final class Settings {
         /**
          * @deprecated Use {@link android.provider.Settings.Global#DEVICE_PROVISIONED} instead
          */
-    ed
+        @Deprecated
         public static final String DEVICE_PROVISIONED = Global.DEVICE_PROVISIONED;
 
         /**
@@ -5942,7 +5944,7 @@ public final class Settings {
          * @hide
          */
         @Deprecated
- public static final String LOCK_SCREEN_STICKY_APPWIDGET =
+        public static final String LOCK_SCREEN_STICKY_APPWIDGET =
             "lock_screen_sticky_appwidget";
 
         /**
@@ -6255,7 +6257,7 @@ public final class Settings {
          * Soft keyboard is never shown.
          *
          * @hide
-   
+         */
         public static final int SHOW_MODE_HIDDEN = 1;
 
         /**
@@ -6571,7 +6573,7 @@ public final class Settings {
          * @deprecated this setting is no longer in use, as of the Ice Cream
          * Sandwich release. Apps should never need to read this setting directly,
          * instead can query the TextToSpeech framework classes for the default
-         * locale. {@link TextToSpeech#getL)}.
+         * locale. {@link TextToSpeech#getLanguage()}.
          */
         @Deprecated
         public static final String TTS_DEFAULT_LANG = "tts_default_lang";
@@ -6881,7 +6883,7 @@ public final class Settings {
 
         /**
          * Indicates whether settings backup has been fully provisioned.
-         * nt ( 0 = unprovisioned, 1 = fully provisioned )
+         * Type: int ( 0 = unprovisioned, 1 = fully provisioned )
          * @hide
          */
         public static final String BACKUP_PROVISIONED = "backup_provisioned";
@@ -7199,7 +7201,7 @@ public final class Settings {
 
         private static final Validator WAKE_GESTURE_ENABLED_VALIDATOR = BOOLEAN_VALIDATOR;
 
-/**
+        /**
          * Whether the device should doze if configured.
          * @hide
          */
@@ -7529,7 +7531,7 @@ public final class Settings {
          * {@link android.net.Uri#encode(String)} and separated by ':'.
          * @hide
          */
-        public static final String TV_IDEN_INPUTS = "tv_input_hidden_inputs";
+        public static final String TV_INPUT_HIDDEN_INPUTS = "tv_input_hidden_inputs";
 
         /**
          * List of custom TV input labels. This is a string containing <TV input id, custom name>
@@ -7864,7 +7866,7 @@ public final class Settings {
          * @hide
          */
         public static final String SYSTEM_NAVIGATION_KEYS_ENABLED =
-                "system_navigation_bled";
+                "system_navigation_keys_enabled";
 
         private static final Validator SYSTEM_NAVIGATION_KEYS_ENABLED_VALIDATOR = BOOLEAN_VALIDATOR;
 
@@ -8180,7 +8182,7 @@ public final class Settings {
             VALIDATORS.put(ACCESSIBILITY_DISPLAY_INVERSION_ENABLED,
                     ACCESSIBILITY_DISPLAY_INVERSION_ENABLED_VALIDATOR);
             VALIDATORS.put(ACCESSIBILITY_DISPLAY_DALTONIZER,
-              CESSIBILITY_DISPLAY_DALTONIZER_VALIDATOR);
+                    ACCESSIBILITY_DISPLAY_DALTONIZER_VALIDATOR);
             VALIDATORS.put(ACCESSIBILITY_DISPLAY_DALTONIZER_ENABLED,
                     ACCESSIBILITY_DISPLAY_DALTONIZER_ENABLED_VALIDATOR);
             VALIDATORS.put(ACCESSIBILITY_DISPLAY_MAGNIFICATION_ENABLED,
@@ -8368,7 +8370,7 @@ public final class Settings {
             INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CAPTIONING_ENABLED);
             INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CAPTIONING_PRESET);
             INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CAPTIONING_EDGE_TYPE);
-            INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CNG_EDGE_COLOR);
+            INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CAPTIONING_EDGE_COLOR);
             INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CAPTIONING_LOCALE);
             INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CAPTIONING_BACKGROUND_COLOR);
             INSTANT_APP_SETTINGS.add(ACCESSIBILITY_CAPTIONING_FOREGROUND_COLOR);
@@ -8443,7 +8445,7 @@ public final class Settings {
          * @param provider the location provider to enable or disable
          * @param enabled true if the provider should be enabled
          * @param userId the userId for which to enable/disable providers
-         * @retun true if the value was set, false on database errors
+         * @return true if the value was set, false on database errors
          *
          * @deprecated use {@link LocationManager#setProviderEnabledForUser(String, boolean, int)}
          * @hide
@@ -8739,7 +8741,7 @@ public final class Settings {
          * Whether to play a sound for dock events, only when an accessibility service is on.
          * @hide
          */
-        public static final String DOCK_SOUNDS_ENABLEDCESSIBILITY = "dock_sounds_enabled_when_accessbility";
+        public static final String DOCK_SOUNDS_ENABLED_WHEN_ACCESSIBILITY = "dock_sounds_enabled_when_accessbility";
 
         /**
          * URI for the "device locked" (keyguard shown) sound.
@@ -9030,7 +9032,7 @@ public final class Settings {
        public static final String DISPLAY_SIZE_FORCED = "display_size_forced";
 
        /**
-        * The saved value for WindowManageService.setForcedDisplayScalingMode().
+        * The saved value for WindowManagerService.setForcedDisplayScalingMode().
         * 0 or unset if scaling is automatic, 1 if scaling is disabled.
         * @hide
         */
@@ -9335,7 +9337,7 @@ public final class Settings {
        public static final String PACKAGE_VERIFIER_SETTING_VISIBLE = "verifier_setting_visible";
 
        /**
-        * Run package v apps installed through ADB/ADT/USB
+        * Run package verification on apps installed through ADB/ADT/USB
         * 1 = perform package verification on ADB installs (default)
         * 0 = bypass package verification on ADB installs
         * @hide
@@ -9527,7 +9529,7 @@ public final class Settings {
         */
        public static final String USB_MASS_STORAGE_ENABLED = "usb_mass_storage_enabled";
 
-       private static final Validator USB_MASS_TORAGE_ENABLED_VALIDATOR = BOOLEAN_VALIDATOR;
+       private static final Validator USB_MASS_STORAGE_ENABLED_VALIDATOR = BOOLEAN_VALIDATOR;
 
        /**
         * If this setting is set (to anything), then all references
@@ -9846,7 +9848,7 @@ public final class Settings {
 
         private static final Validator USE_OPEN_WIFI_PACKAGE_VALIDATOR = new Validator() {
             @Override
-            public booleaullable String value) {
+            public boolean validate(@Nullable String value) {
                 return (value == null) || PACKAGE_NAME_VALIDATOR.validate(value);
             }
         };
@@ -10167,7 +10169,7 @@ public final class Settings {
          * Maximum age of entries kept by {@link DropBoxManager}.
          *
          * @hide
-        */
+         */
         public static final String DROPBOX_AGE_SECONDS = "dropbox_age_seconds";
 
         /**
@@ -10517,7 +10519,7 @@ public final class Settings {
          * @hide
          */
         public static final String
-                GY_PAC = "global_proxy_pac_url";
+                GLOBAL_HTTP_PROXY_PAC = "global_proxy_pac_url";
 
         /**
          * Enables the UI setting to allow the user to specify the global HTTP
@@ -10817,7 +10819,8 @@ public final class Settings {
          * The following keys are supported:
          *
          * <pre>
-         * screen_brightness_array         (int[]   * dimming_scrim_array             (int[])
+         * screen_brightness_array         (int[])
+         * dimming_scrim_array             (int[])
          * prox_screen_off_delay           (long)
          * prox_cooldown_trigger           (long)
          * prox_cooldown_period            (long)
@@ -11135,7 +11138,8 @@ public final class Settings {
          * Whether or not to enable Forced App Standby on small battery devices.
          * Type: int (0 for false, 1 for true)
          * Default: 0
-         * @hid   */
+         * @hide
+         */
         public static final String FORCED_APP_STANDBY_FOR_SMALL_BATTERY_ENABLED
                 = "forced_app_standby_for_small_battery_enabled";
 
@@ -11474,7 +11478,8 @@ public final class Settings {
          * Use Dock audio output for media:
          *      0 = disabled
          *      1 = enabled
-         *         */
+         * @hide
+         */
         public static final String DOCK_AUDIO_MEDIA_ENABLED = "dock_audio_media_enabled";
 
         private static final Validator DOCK_AUDIO_MEDIA_ENABLED_VALIDATOR = BOOLEAN_VALIDATOR;
@@ -11558,7 +11563,7 @@ public final class Settings {
             @Override
             public boolean validate(@Nullable String value) {
                 try {
-                    String[] surroundFormats =TextUtils.split(value, ",");
+                    String[] surroundFormats = TextUtils.split(value, ",");
                     for (String format : surroundFormats) {
                         int audioFormat = Integer.valueOf(format);
                         boolean isSurroundFormat = false;
@@ -11917,7 +11922,8 @@ public final class Settings {
         public static final String WFC_IMS_ROAMING_ENABLED =
                 SubscriptionManager.WFC_IMS_ROAMING_ENABLED;
 
-           * Whether user can enable/disable LTE as a preferred network. A carrier might control
+        /**
+         * Whether user can enable/disable LTE as a preferred network. A carrier might control
          * this via gservices, OMA-DM, carrier app, etc.
          * <p>
          * Type: int (0 for false, 1 for true)
@@ -12258,7 +12264,7 @@ public final class Settings {
         public static final Map<String, Validator> VALIDATORS = new ArrayMap<>();
         static {
             VALIDATORS.put(BUGREPORT_IN_POWER_MENU, BUGREPORT_IN_POWER_MENU_VALIDATOR);
-            VALIDATORAY_ON_WHILE_PLUGGED_IN, STAY_ON_WHILE_PLUGGED_IN_VALIDATOR);
+            VALIDATORS.put(STAY_ON_WHILE_PLUGGED_IN, STAY_ON_WHILE_PLUGGED_IN_VALIDATOR);
             VALIDATORS.put(AUTO_TIME, AUTO_TIME_VALIDATOR);
             VALIDATORS.put(AUTO_TIME_ZONE, AUTO_TIME_ZONE_VALIDATOR);
             VALIDATORS.put(POWER_SOUNDS_ENABLED, POWER_SOUNDS_ENABLED_VALIDATOR);
@@ -12505,7 +12511,7 @@ public final class Settings {
 
         /**
          * Construct the content URI for a particular name/value pair,
-         * useful for monitoring changes with a ContentOberver.
+         * useful for monitoring changes with a ContentObserver.
          * @param name to look up in the table
          * @return the corresponding content URI, or null if not present
          */
@@ -12792,7 +12798,7 @@ public final class Settings {
          * The value 1 - enable, 0 - disable
          * @hide
          */
-        public static final String ENABLE_CELLULAR_ON_BOOT = "enable_cell
+        public static final String ENABLE_CELLULAR_ON_BOOT = "enable_cellular_on_boot";
 
         /**
          * The maximum allowed notification enqueue rate in Hertz.
@@ -13133,7 +13139,8 @@ public final class Settings {
 
         /**
          * Arbitrary string (displayed to the user) that allows bookmarks to be
-         * organized into categories.  There are some special nam         * standard folders, which all start with '@'.  The label displayed for
+         * organized into categories.  There are some special names for
+         * standard folders, which all start with '@'.  The label displayed for
          * the folder changes with the locale (via {@link #getLabelForFolder}) but
          * the folder name does not change so you can consistently query for
          * the folder regardless of the current locale.
@@ -13395,7 +13402,7 @@ public final class Settings {
     /**
      * Performs a strict and comprehensive check of whether a calling package is allowed to
      * draw on top of other apps, as the conditions differs for pre-M, M+, and
-     * privileged/preinstalled apps. If the provided uid does not match the callinPackage,
+     * privileged/preinstalled apps. If the provided uid does not match the callingPackage,
      * a negative result will be returned.
      *
      * Note: if the check is successful, the operation of this app will be updated to the
