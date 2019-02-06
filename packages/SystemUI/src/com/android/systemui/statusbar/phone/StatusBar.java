@@ -94,6 +94,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.Process;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemClock;
@@ -141,9 +142,11 @@ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 import com.android.internal.statusbar.IStatusBarService;
 import com.android.internal.statusbar.NotificationVisibility;
 import com.android.internal.statusbar.StatusBarIcon;
+import com.android.internal.statusbar.ThemeAccentUtils;
 import com.android.internal.widget.LockPatternUtils;
 import com.android.internal.widget.MessagingGroup;
 import com.android.internal.widget.MessagingMessage;
+import com.android.internal.util.crdroid.Utils;
 import com.android.keyguard.KeyguardHostView.OnDismissAction;
 import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.keyguard.KeyguardUpdateMonitorCallback;
@@ -232,6 +235,7 @@ import com.android.systemui.statusbar.policy.DarkIconDispatcher;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController.DeviceProvisionedListener;
 import com.android.systemui.statusbar.policy.ExtensionController;
+import com.android.systemui.statusbar.policy.FlashlightController;
 import com.android.systemui.statusbar.policy.HeadsUpManager;
 import com.android.systemui.statusbar.policy.HeadsUpUtil;
 import com.android.systemui.statusbar.policy.KeyguardMonitor;
@@ -251,7 +255,6 @@ import com.android.systemui.volume.VolumeComponent;
 
 import lineageos.hardware.LiveDisplayManager;
 import lineageos.providers.LineageSettings;
-import lineageos.style.StyleInterface;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -288,8 +291,14 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
             "lineagesecure:" + LineageSettings.Secure.LOCKSCREEN_MEDIA_METADATA;
     public static final String FORCE_SHOW_NAVBAR =
             "lineagesystem:" + LineageSettings.System.FORCE_SHOW_NAVBAR;
-    public static final String BERRY_GLOBAL_STYLE =
-            "lineagesystem:" + LineageSettings.System.BERRY_GLOBAL_STYLE;
+    private static final String BERRY_ACCENT_PICKER =
+            "system:" + Settings.System.BERRY_ACCENT_PICKER;
+    private static final String BERRY_THEME_OVERRIDE =
+            "system:" + Settings.System.BERRY_THEME_OVERRIDE;
+    private static final String BERRY_DARK_STYLE =
+            "system:" + Settings.System.BERRY_DARK_STYLE;
+    private static final String BERRY_NOTIFICATION_STYLE =
+            "system:" + Settings.System.BERRY_NOTIFICATION_STYLE;
 
     private static final String BANNER_ACTION_CANCEL =
             "com.android.systemui.statusbar.banner_action_cancel";
@@ -464,6 +473,12 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
     private boolean mBrightnessChanged;
     private boolean mJustPeeked;
 
+    private int mAccentSetting;
+    private int mThemeOverride;
+    private int mDarkStyle;
+    private int mNotiStyle;
+    private boolean mPowerSave;
+
     /**
      * Helper that is responsible for showing the right toast when a disallowed activity operation
      * occurred. In pinned mode, we show instructions on how to break out of this mode, whilst in
@@ -630,6 +645,7 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         }
     };
 
+    private FlashlightController mFlashlightController;
     private KeyguardUserSwitcher mKeyguardUserSwitcher;
     protected UserSwitcherController mUserSwitcherController;
     private NetworkController mNetworkController;
@@ -718,7 +734,10 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         tunerService.addTunable(this, STATUS_BAR_BRIGHTNESS_CONTROL);
         tunerService.addTunable(this, LOCKSCREEN_MEDIA_METADATA);
         tunerService.addTunable(this, FORCE_SHOW_NAVBAR);
-        tunerService.addTunable(this, BERRY_GLOBAL_STYLE);
+        tunerService.addTunable(this, BERRY_ACCENT_PICKER);
+        tunerService.addTunable(this, BERRY_THEME_OVERRIDE);
+        tunerService.addTunable(this, BERRY_DARK_STYLE);
+        tunerService.addTunable(this, BERRY_NOTIFICATION_STYLE);
 
         mDisplayManager = mContext.getSystemService(DisplayManager.class);
 
@@ -956,14 +975,13 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
             mNotificationPanelDebugText.setVisibility(View.VISIBLE);
         }
 
-        try {
-            boolean showNav = mWindowManagerService.hasNavigationBar();
-            if (DEBUG) Log.v(TAG, "hasNavigationBar=" + showNav);
-            if (showNav) {
-                createNavigationBar();
-            }
-        } catch (RemoteException ex) {
-            // no window manager? good luck with that
+        boolean showNav = LineageSettings.System.getIntForUser(mContext.getContentResolver(),
+                LineageSettings.System.FORCE_SHOW_NAVBAR,
+                Utils.hasNavbarByDefault(mContext) ? 1 : 0, UserHandle.USER_CURRENT) != 0;
+        if (DEBUG)
+            Log.v(TAG, "hasNavigationBar=" + showNav);
+        if (showNav) {
+            createNavigationBar();
         }
         mScreenPinningNotify = new ScreenPinningNotify(mContext);
         mStackScroller.setLongPressListener(mEntryManager.getNotificationLongClicker());
@@ -1006,8 +1024,8 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                     mDozeServiceHost.firePowerSaveChanged(isPowerSave);
                 }
                 if (NIGHT_MODE_IN_BATTERY_SAVER) {
-                    mContext.getSystemService(UiModeManager.class).setNightMode(
-                        isPowerSave ? UiModeManager.MODE_NIGHT_YES : UiModeManager.MODE_NIGHT_NO);
+                    mPowerSave = isPowerSave;
+                    updateTheme();
                 }
             }
 
@@ -1153,9 +1171,13 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
         // Private API call to make the shadows look better for Recents
         ThreadedRenderer.overrideProperty("ambientRatio", String.valueOf(1.5f));
+
+        mFlashlightController = Dependency.get(FlashlightController.class);
     }
 
     protected void createNavigationBar() {
+        if (mNavigationBarView != null)
+            return;
         mNavigationBarView = NavigationBarFragment.create(mContext, (tag, fragment) -> {
             mNavigationBar = (NavigationBarFragment) fragment;
             if (mLightBarController != null) {
@@ -1163,6 +1185,20 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
             }
             mNavigationBar.setCurrentSysuiVisibility(mSystemUiVisibility);
         });
+    }
+
+    protected void removeNavigationBar() {
+        if (mNavigationBarView != null) {
+            FragmentHostManager fragmentHost = FragmentHostManager.get(mNavigationBarView);
+            if (mNavigationBarView.isAttachedToWindow()) {
+                mWindowManager.removeViewImmediate(mNavigationBarView);
+            }
+            if (mNavigationBar != null) {
+                fragmentHost.getFragmentManager().beginTransaction().remove(mNavigationBar).commit();
+                mNavigationBar = null;
+            }
+            mNavigationBarView = null;
+        }
     }
 
     /**
@@ -1257,6 +1293,12 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         if (mBrightnessMirrorController != null) {
             mBrightnessMirrorController.onOverlayChanged();
         }
+        mGutsManager.onOverlayChanged();
+        mStackScroller.onOverlayChanged();
+        mNotificationShelf.onOverlayChanged();
+        mNotificationPanel.onOverlayChanged();
+        Dependency.get(DarkIconDispatcher.class).onOverlayChanged(mContext);
+        reevaluateStyles();
     }
 
     private void inflateEmptyShadeView() {
@@ -2175,33 +2217,24 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         updateTheme();
     }
 
-    public boolean isUsingDarkTheme() {
-        OverlayInfo themeInfo = null;
-        try {
-            themeInfo = mOverlayManager.getOverlayInfo(getDarkOverlay(),
-                    mLockscreenUserManager.getCurrentUserId());
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        return themeInfo != null && themeInfo.isEnabled();
+    // Check for the dark system theme
+    public boolean isUsingDarkSystemTheme() {
+        return ThemeAccentUtils.isUsingDarkTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId());
     }
 
-    private boolean isLiveDisplayNightModeOn() {
-        // SystemUI is initialized before LiveDisplay, so the service may not
-        // be ready when this is called the first time
-        LiveDisplayManager manager = LiveDisplayManager.getInstance(mContext);
-        try {
-            return manager.isNightModeEnabled();
-        } catch (NullPointerException e) {
-            Log.w(TAG, e.getMessage());
-        }
-        return false;
+    // Check for the black system theme
+    public boolean isUsingBlackSystemTheme() {
+        return ThemeAccentUtils.isUsingBlackTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId());
     }
 
-    private String getDarkOverlay() {
-        return LineageSettings.System.getString(mContext.getContentResolver(),
-                LineageSettings.System.BERRY_DARK_OVERLAY,
-                StyleInterface.OVERLAY_DARK_DEFAULT);
+    // Check for the dark notification theme
+    public boolean isUsingDarkNotificationTheme() {
+        return ThemeAccentUtils.isUsingDarkNotificationTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId());
+    }
+
+    // Check for the black notification theme
+    public boolean isUsingBlackNotificationTheme() {
+        return ThemeAccentUtils.isUsingBlackNotificationTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId());
     }
 
     @Nullable
@@ -2356,6 +2389,16 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
     public void showPinningEscapeToast() {
         mScreenPinningNotify.showEscapeToast(getNavigationBarView() == null
                 || getNavigationBarView().isRecentsButtonVisible());
+    }
+
+    @Override
+    public void toggleCameraFlash() {
+        if (mFlashlightController != null) {
+            mFlashlightController.initFlashLight();
+            if (mFlashlightController.hasFlashlight() && mFlashlightController.isAvailable()) {
+                mFlashlightController.setFlashlight(!mFlashlightController.isEnabled());
+            }
+        }
     }
 
     boolean panelsEnabled() {
@@ -3018,7 +3061,8 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         if (mOverlayManager == null) {
             pw.println("    overlay manager not initialized!");
         } else {
-            pw.println("    dark overlay on: " + isUsingDarkTheme());
+            pw.println("    dark overlay on: " + isUsingDarkSystemTheme());
+            pw.println("    black overlay on: " + isUsingBlackSystemTheme());
         }
         final boolean lightWpTheme = mContext.getThemeResId() == R.style.Theme_SystemUI_Light;
         pw.println("    light wallpaper theme: " + lightWpTheme);
@@ -3088,6 +3132,10 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         pw.println("SharedPreferences:");
         for (Map.Entry<String, ?> entry : Prefs.getAll(mContext).entrySet()) {
             pw.print("  "); pw.print(entry.getKey()); pw.print("="); pw.println(entry.getValue());
+        }
+
+        if (mFlashlightController != null) {
+            mFlashlightController.dump(fd, pw, args);
         }
     }
 
@@ -4102,26 +4150,33 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
         Trace.endSection();
     }
 
+    private boolean isLiveDisplayNightModeOn() {
+        // SystemUI is initialized before LiveDisplay, so the service may not
+        // be ready when this is called the first time
+        LiveDisplayManager manager = LiveDisplayManager.getInstance(mContext);
+        try {
+            return manager.isNightModeEnabled();
+        } catch (NullPointerException e) {
+            Log.w(TAG, e.getMessage());
+        }
+        return false;
+    }
+
     /**
      * Switches theme from light to dark and vice-versa.
      */
     protected void updateTheme() {
         final boolean inflated = mStackScroller != null && mStatusBarWindowManager != null;
 
-        // 0 = auto, 1 = time-based, 2 = light, 3 = dark
-        final int globalStyleSetting = LineageSettings.System.getInt(mContext.getContentResolver(),
-                LineageSettings.System.BERRY_GLOBAL_STYLE, 0);
         WallpaperColors systemColors = mColorExtractor
                 .getWallpaperColors(WallpaperManager.FLAG_SYSTEM);
         final boolean wallpaperWantsDarkTheme = systemColors != null
                 && (systemColors.getColorHints() & WallpaperColors.HINT_SUPPORTS_DARK_THEME) != 0;
         final Configuration config = mContext.getResources().getConfiguration();
-        final boolean nightModeWantsDarkTheme = DARK_THEME_IN_NIGHT_MODE
-                && (config.uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                    == Configuration.UI_MODE_NIGHT_YES;
-        final boolean useDarkTheme;
+        boolean useDarkTheme;
 
-        switch (globalStyleSetting) {
+        // 0 = auto, 1 = time-based, 2 = light, 3 = dark
+        switch (mThemeOverride) {
             case 1:
                 useDarkTheme = isLiveDisplayNightModeOn();
                 break;
@@ -4132,23 +4187,40 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
                 useDarkTheme = true;
                 break;
             default:
-                useDarkTheme = wallpaperWantsDarkTheme || nightModeWantsDarkTheme;
+                useDarkTheme = wallpaperWantsDarkTheme || mPowerSave;
                 break;
         }
 
-        if (isUsingDarkTheme() != useDarkTheme) {
-            mUiOffloadThread.submit(() -> {
-                try {
-                    mOverlayManager.setEnabled(getDarkOverlay(),
-                            useDarkTheme, mLockscreenUserManager.getCurrentUserId());
-                } catch (RemoteException e) {
-                    Log.w(TAG, "Can't change theme", e);
-                }
+        Settings.System.putIntForUser(mContext.getContentResolver(),
+                Settings.System.BERRY_DARK_CHECK, useDarkTheme ? 1 : 0, UserHandle.USER_CURRENT);
 
-                if (mUiModeManager != null) {
-                    mUiModeManager.setNightMode(useDarkTheme ?
-                            UiModeManager.MODE_NIGHT_YES : UiModeManager.MODE_NIGHT_NO);
-                }
+        boolean useDarkSystemTheme = useDarkTheme && mDarkStyle == 0;
+        boolean useBlackSystemTheme = useDarkTheme && mDarkStyle == 1;
+
+        if ((isUsingDarkSystemTheme() != useDarkSystemTheme) ||
+                (isUsingBlackSystemTheme() != useBlackSystemTheme)) {
+            mUiOffloadThread.submit(() -> {
+                ThemeAccentUtils.setSystemTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId(),
+                                            useDarkTheme, mDarkStyle);
+            });
+
+            if (mUiModeManager != null) {
+                mUiModeManager.setNightMode(UiModeManager.MODE_NIGHT_NO);
+                if (useDarkTheme) mUiModeManager.setNightMode(UiModeManager.MODE_NIGHT_YES);
+            }
+        }
+
+        boolean useDarkNotificationTheme = (mNotiStyle == 0 && useDarkTheme && mDarkStyle == 0) ||
+                                            mNotiStyle == 2;
+        boolean useBlackNotificationTheme = (mNotiStyle == 0 && useDarkTheme && mDarkStyle == 1) ||
+                                            mNotiStyle == 3;
+
+        if ((isUsingDarkNotificationTheme() != useDarkNotificationTheme) ||
+                (isUsingBlackNotificationTheme() != useBlackNotificationTheme)) {
+            mUiOffloadThread.submit(() -> {
+                ThemeAccentUtils.setNotificationTheme(mOverlayManager, mLockscreenUserManager.getCurrentUserId(),
+                                            useDarkTheme, mDarkStyle, mNotiStyle);
+                onOverlayChanged();
             });
         }
 
@@ -4178,6 +4250,13 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
             // Make sure we have the correct navbar/statusbar colors.
             mStatusBarWindowManager.setKeyguardDark(useDarkText);
         }
+    }
+
+    private void updateAccent() {
+        mUiOffloadThread.submit(() -> {
+            ThemeAccentUtils.unloadAccents(mOverlayManager, mLockscreenUserManager.getCurrentUserId());
+            ThemeAccentUtils.updateAccents(mOverlayManager, mLockscreenUserManager.getCurrentUserId(), mAccentSetting);
+        });
     }
 
     private void updateDozingState() {
@@ -5881,27 +5960,60 @@ public class StatusBar extends SystemUI implements DemoMode, TunerService.Tunabl
 
     @Override
     public void onTuningChanged(String key, String newValue) {
-        if (SCREEN_BRIGHTNESS_MODE.equals(key)) {
-            mAutomaticBrightness = newValue != null && Integer.parseInt(newValue)
-                    == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC;
-        } else if (STATUS_BAR_BRIGHTNESS_CONTROL.equals(key)) {
-            mBrightnessControl = newValue != null && Integer.parseInt(newValue) == 1;
-        } else if (LOCKSCREEN_MEDIA_METADATA.equals(key)) {
-            mShowMediaMetadata = newValue == null || Integer.parseInt(newValue) != 0;
-        } else if (mWindowManagerService != null && FORCE_SHOW_NAVBAR.equals(key)) {
-            boolean forcedVisibility = newValue != null && Integer.parseInt(newValue) == 1;
+        switch (key) {
+            case SCREEN_BRIGHTNESS_MODE:
+                mAutomaticBrightness = newValue != null && Integer.parseInt(newValue)
+                        == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC;
+                break;
+            case LOCKSCREEN_MEDIA_METADATA:
+                mShowMediaMetadata = newValue == null || Integer.parseInt(newValue) != 0;
+                break;
+            case FORCE_SHOW_NAVBAR:
+                if (mWindowManagerService == null) break;
+                boolean mNavbarVisible =
+                        newValue == null ? Utils.hasNavbarByDefault(mContext) :
+                                    Integer.parseInt(newValue) != 0;
+                if (mNavbarVisible && mNavigationBarView == null) {
+                    createNavigationBar();
+                } else if (!mNavbarVisible && mNavigationBarView != null) {
+                    removeNavigationBar();
+                }
+                break;
+            case BERRY_ACCENT_PICKER:
+                int accentSetting =
+                        newValue == null ? 0 : Integer.parseInt(newValue);
+                if (mAccentSetting != accentSetting) {
+                    mAccentSetting = accentSetting;
+                    updateAccent();
+                }
+                break;
+            case BERRY_THEME_OVERRIDE:
+                int themeOverride =
+                        newValue == null ? 0 : Integer.parseInt(newValue);
+                if (mThemeOverride != themeOverride) {
+                    mThemeOverride = themeOverride;
+                    updateTheme();
+                }
+                break;
 
-            if (forcedVisibility && mNavigationBarView == null) {
-                createNavigationBar();
-            } else if (mNavigationBarView != null) {
-                FragmentHostManager fm = FragmentHostManager.get(mNavigationBarView);
-                mWindowManager.removeViewImmediate(mNavigationBarView);
-                mNavigationBarView = null;
-                fm.getFragmentManager().beginTransaction().remove(mNavigationBar).commit();
-                mNavigationBar = null;
-            }
-        } else if (BERRY_GLOBAL_STYLE.equals(key)) {
-            updateTheme();
+            case BERRY_DARK_STYLE:
+                int darkStyle =
+                        newValue == null ? 0 : Integer.parseInt(newValue);
+                if (mDarkStyle != darkStyle) {
+                    mDarkStyle = darkStyle;
+                    updateTheme();
+                }
+                break;
+            case BERRY_NOTIFICATION_STYLE:
+                int notiStyle =
+                        newValue == null ? 0 : Integer.parseInt(newValue);
+                if (mNotiStyle != notiStyle) {
+                    mNotiStyle = notiStyle;
+                    updateTheme();
+                }
+                break;
+            default:
+                break;
         }
     }
     // End Extra BaseStatusBarMethods.
