@@ -85,6 +85,7 @@ public class ThemeAccentUtils {
 	"com.accents.netflix", //29 Netflix Accent
 	"com.accents.bubblegumpink", //30 Bubblegum Pink Accent
 	"com.accents.darkindigo", //31 Dark Indigo Accent
+	"com.accents.yandex", //32 Yandex Accent
     };
 
     // Unloads the stock dark theme
