@@ -397,7 +397,6 @@ public class Utils {
         return needsNav;
     }
 
-<<<<<<< HEAD
     // Volume panel
     public static void toggleVolumePanel(Context context) {
         AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
