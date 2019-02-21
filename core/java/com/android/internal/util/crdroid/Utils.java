@@ -70,7 +70,7 @@ public class Utils {
     }
 
     private static IStatusBarService getStatusBarService() {
-        synchronized (ActionUtils.class) {
+        synchronized (Utils.class) {
             if (mStatusBarService == null) {
                 mStatusBarService = IStatusBarService.Stub.asInterface(
                         ServiceManager.getService("statusbar"));
