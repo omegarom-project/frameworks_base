@@ -110,7 +110,6 @@ public class ThemeAccentUtils {
         "com.android.systemui.qstile.teardrop", // 17
         "com.android.systemui.qstile.wavey", // 18
 	"com.android.systemui.qstile.cookie", // 19 Cookie
-	"com.android.systemui.qstile.dualtonehexagon", //20 Dual-Toned Hexagon
     };
 
     // QS Header Styles
